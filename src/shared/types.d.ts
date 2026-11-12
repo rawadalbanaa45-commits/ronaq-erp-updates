@@ -1,0 +1,96 @@
+export {};
+declare global {
+  interface Window {
+    ronaq: {
+      appName: string;
+      createBackup: () => Promise<{path:string;verified:boolean}>;
+      resetAllBusinessData: () => Promise<{reset:boolean;safetyBackup:string}>;
+      backupHistory: () => Promise<any[]>;
+      removableUsbDrives: () => Promise<Array<{drive:string;label:string;freeBytes:number}>>;
+      copyBackupToUsb: () => Promise<{drives:Array<{drive:string;label:string;freeBytes:number;result:any;error:string|null}>}>;
+      restoreBackup: (id:number) => Promise<{restored:boolean;safetyBackup:string;restartRequired:boolean}>;
+      auditLog: (limit?:number) => Promise<any[]>;
+      settings: () => Promise<any[]>;
+      setSetting: (input:{key:string;value:string}) => Promise<any>;
+      createOpeningBalances: (input:{balanceDate:string;cash?:number;finishedGoods?:Array<{productId:number;quantity:number}>;rawMaterials?:Array<{materialId:number;quantity:number}>;partyBalances?:Array<{partyId:number;balance:number;direction:'receivable'|'payable'}>}) => Promise<{id:number}>;
+      openingBalanceStatus: () => Promise<{recorded:boolean;batch:{id:number;balance_date:string;created_at:string;notes:string|null}|null}>;
+      openingBalanceParties: () => Promise<Array<{id:number;party_type:string;name:string;phone:string|null}>>;
+      version: string;
+      restartApp: () => Promise<{restarting:boolean}>;
+      appVersion: () => Promise<string>;
+      configureUpdates: (url:string) => Promise<{configured:boolean}>;
+      checkUpdates: () => Promise<any>;
+      downloadUpdate: () => Promise<any>;
+      installUpdate: () => Promise<{installing:boolean}>;
+      onUpdateStatus: (callback:(status:{status:string;message?:string;percent?:number;version?:string})=>void) => () => void;
+      databaseStatus: () => Promise<{connected:boolean;integrity:string;path:string}>;
+      workers: () => Promise<Array<{id:number;name:string;job_title:string|null}>>;
+      createWorker: (input:{name:string;jobTitle?:string}) => Promise<any>;
+      attendanceWeek: (date:string) => Promise<any[]>;
+      recordAttendance: (input:{workerId:number;workDate:string;status:'present'|'absent'|'leave';checkIn?:string;checkOut?:string;notes?:string}) => Promise<any>;
+      stockSummary: () => Promise<Array<{id:number;code:string;name:string;unit:string;minimum_stock:number;balance:number;inboundToday:number;outboundToday:number;lowStock:boolean}>>;
+      createProduct: (input:{name:string;unit:string;minimumStock?:number}) => Promise<any>;
+      products: () => Promise<Array<{id:number;code:string;name:string;unit:string;minimum_stock:number}>>;
+      stockMovements: (limit?:number) => Promise<Array<{id:number;movement_type:string;quantity:number;notes:string|null;created_at:string;product_name:string;unit:string}>>;
+      createProduction: (input:{productionDate?:string;mealNo?:number;notes?:string;lines:Array<{productId:number;quantity:number}>}) => Promise<{id:number;batchNo:string}>;
+      issueStock: (input:{productId:number;quantity:number;kind:'sale_out'|'driver_load_out';notes?:string}) => Promise<{balance:number}>;
+      adjustStock: (input:{productId:number;direction:'in'|'out';quantity:number;reason:string;createdBy?:number}) => Promise<{balance:number}>;
+      createStockReturn: (input:{sourceType:'employee_driver'|'distributor';sourceId?:number;notes?:string;lines:Array<{productId:number;quantity:number}>}) => Promise<{id:number;returnNo:string;status:string}>;
+      pendingReturns: () => Promise<unknown[]>;
+      stockReturnDetails: (id:number) => Promise<any>;
+      inspectStockReturn: (input:{returnId:number;decision:'accepted'|'rejected';reason?:string}) => Promise<{id:number;status:string}>;
+      createSalesInvoice: (input:unknown) => Promise<{id:number;invoiceNo:string;totalAmount:number;paidAmount:number;remainingAmount:number}>;
+      collectInvoicePayment: (input:unknown) => Promise<any>;
+      salesInvoices: (input?:unknown) => Promise<any[]>;
+      salesInvoiceDetails: (id:number) => Promise<any>;
+      salesSummary: (input?:unknown) => Promise<any>;
+      salesParties: () => Promise<any[]>;
+      customers: () => Promise<any[]>;
+      createCustomer: (input:{name:string;phone?:string;address?:string;notes?:string}) => Promise<{id:number;name:string}>;
+      customerStatement: (input:{customerId:number;fromDate?:string;toDate?:string}) => Promise<any>;
+      drivers: () => Promise<Array<{id:number;name:string;phone:string|null;notes:string|null}>>;
+      createDriver: (input:{name:string;phone?:string;notes?:string}) => Promise<{id:number;name:string}>;
+      createDriverLoad: (input:{driverId:number;loadDate?:string;vehicleName?:string;notes?:string;lines:Array<{productId:number;quantity:number}>}) => Promise<{id:number;loadNo:string}>;
+      driverLoads: (input?:{fromDate?:string;toDate?:string}) => Promise<any[]>;
+      saveDriverDailySheet: (input:{driverId:number;sheetDate?:string;cashSales:number;creditSales:number;oldDebtCollected:number;expenses:number;cashDelivered:number;notes?:string;expenseLines?:Array<{expenseName:string;amount:number;notes?:string}>;correctionReason?:string;salesLines?:Array<{customerName:string;productId:number;quantity:number;unitPrice:number;paymentType:'cash'|'credit';receiptNo?:string}>}) => Promise<any>;
+      driverDailySheets: (input?:{fromDate?:string;toDate?:string}) => Promise<any[]>;
+      driverDailySheet: (id:number) => Promise<any>;
+      closeDriverDailySheet: (input:{id:number;reason?:string}) => Promise<any>;
+      distributors: () => Promise<any[]>;
+      createDistributor: (input:{name:string;phone?:string;address?:string;notes?:string}) => Promise<{id:number;name:string}>;
+      distributorDrivers: (id:number) => Promise<any[]>;
+      addDistributorDriver: (input:{distributorId:number;name:string;phone?:string}) => Promise<{id:number;name:string}>;
+      createDistributorAgreement: (input:{distributorId:number;agreementDate?:string;notes?:string;lines:Array<{productId:number;quantity:number;unitPrice:number}>}) => Promise<{id:number;agreementNo:string}>;
+      distributorAgreements: (id?:number) => Promise<any[]>;
+      distributorAgreement: (id:number) => Promise<any>;
+      addDistributorPayment: (input:{agreementId:number;paymentDate?:string;amount:number;paymentMethod:'cash'|'card'|'transfer';notes?:string}) => Promise<any>;
+      createDistributorPickup: (input:{distributorId:number;driverId?:number;driverName?:string;vehicleName?:string;pickupDate?:string;notes?:string;lines:Array<{agreementLineId:number;quantity:number}>}) => Promise<any>;
+      refundDistributorAgreement: (input:{agreementId:number;refundDate?:string;amount:number;notes?:string}) => Promise<any>;
+
+      financeSummary: () => Promise<any>;
+      dashboardSummary: () => Promise<any>;
+      financialReport: (input:{fromDate:string;toDate:string}) => Promise<any>;
+      cashMovements: (input?:{fromDate?:string;toDate?:string}) => Promise<any[]>;
+      createCashVoucher: (input:{direction:'in'|'out';amount:number;date?:string;notes:string;partyId?:number;opening?:boolean}) => Promise<any>;
+      suppliers: () => Promise<any[]>;
+      createSupplier: (input:{name:string;phone?:string;address?:string;notes?:string}) => Promise<any>;
+      addSupplierPayment: (input:{supplierId:number;purchaseId?:number;paymentDate?:string;amount:number;paymentMethod:'cash'|'card'|'transfer';notes?:string}) => Promise<any>;
+      rawMaterials: () => Promise<any[]>;
+      createRawMaterial: (input:{name:string;unit?:string}) => Promise<any>;
+      createPurchase: (input:{supplierId:number;purchaseDate?:string;invoiceNo?:string;notes?:string;lines:Array<{materialId:number;quantity:number;unitCost:number}>;paidAmount?:number;paymentMethod?:'cash'|'card'|'transfer'}) => Promise<any>;
+      createProductionCost: (input:{productId:number;productionDate:string;quantity:number;totalCost:number;notes?:string}) => Promise<any>;
+      productionCosts: (input?:{fromDate?:string;toDate?:string}) => Promise<any[]>;
+      purchases: (input?:{fromDate?:string;toDate?:string}) => Promise<any[]>;
+      expenseCategories: () => Promise<any[]>;
+      createExpenseCategory: (input:{name:string;categoryType?:'general'|'fuel'}) => Promise<any>;
+      createExpense: (input:{categoryId:number;expenseName:string;expenseDate?:string;amount:number;beneficiaryDriverId?:number;vehicleName?:string;fuelType?:string;notes?:string}) => Promise<any>;
+      expenses: (input?:{fromDate?:string;toDate?:string}) => Promise<any[]>;
+      employees: () => Promise<any[]>;
+      createEmployee: (input:{name:string;phone?:string}) => Promise<any>;
+      paySalary: (input:{employeeId:number;paymentDate?:string;amount:number;notes?:string}) => Promise<any>;
+      salaryPayments: (input?:{fromDate?:string;toDate?:string}) => Promise<any[]>;
+
+    };
+  }
+
+}

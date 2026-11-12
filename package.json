@@ -1,0 +1,80 @@
+{
+  "name": "ronaq-erp",
+  "version": "0.22.4",
+  "private": true,
+  "description": "Offline ERP system for Ronaq Al-Basra water factory",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "build:renderer": "tsc -b && vite build",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build": "npm run build:renderer && npm run build:main",
+    "dist:win": "npm run build && electron-builder --win nsis",
+    "start": "electron .",
+    "typecheck": "tsc --noEmit",
+    "test:db": "python tests/schema_smoke.py && python tests/system_stage_smoke.py && python tests/restore_contract_smoke.py && python tests/invoice_print_smoke.py && python tests/opening_balance_stage_smoke.py && python tests/usb_backup_stage_smoke.py && python tests/report_pdf_stage_smoke.py && python tests/dashboard_live_stage_smoke.py && python tests/warehouse_adjustment_stage_smoke.py && python tests/customers_stage_smoke.py && python tests/tab_state_preservation_smoke.py && python tests/production_cost_stage_smoke.py && python tests/local_date_stage_smoke.py && python tests/driver_cash_ledger_stage_smoke.py && python tests/supplier_payment_ui_stage_smoke.py && python tests/return_workflow_ui_stage_smoke.py && python tests/business_accounting_sql_smoke.py && python tests/sales_payment_method_cash_stage_smoke.py && python tests/distributor_history_stage_smoke.py && python tests/distributor_prepaid_guard_stage_smoke.py && python tests/driver_reconciliation_correction_ui_smoke.py && python tests/driver_sales_detail_stage_smoke.py && python tests/theme_persistence_stage_smoke.py && python tests/windows_build_assets_stage_smoke.py && python tests/driver_price_stage_smoke.py && python tests/customer_debt_invoice_detail_stage_smoke.py"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "better-sqlite3": "^11.7.0",
+    "electron-updater": "^6.6.2",
+    "@fontsource/cairo": "^5.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "electron": "^33.2.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "@types/better-sqlite3": "^7.6.12",
+    "electron-builder": "^25.1.8",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://updates.example.com/ronaq/"
+      }
+    ],
+    "appId": "iq.ronaqbasra.erp",
+    "productName": "RONAQ ERP",
+    "asar": true,
+    "npmRebuild": true,
+    "files": [
+      "dist/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "icon": "public/ronaQ-icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "RONAQ ERP"
+    },
+    "directories": {
+      "output": "release"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Plus, RefreshCw, ReceiptText } from 'lucide-react';
+
+type Product = {id:number;name:string;unit:string};
+type Party = {id:number;name:string;party_type:string};
+type Line = {productId:number;quantity:string;unitPrice:string};
+const fmt=(n:number)=>new Intl.NumberFormat('en-US').format(n||0);
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+export default function SalesPanel(){
+ const [products,setProducts]=useState<Product[]>([]),[parties,setParties]=useState<Party[]>([]),[invoices,setInvoices]=useState<any[]>([]),[todayInvoices,setTodayInvoices]=useState<any[]>([]),[summary,setSummary]=useState<any>({}),[historyDate,setHistoryDate]=useState('');
+ const [kind,setKind]=useState<'walk_in'|'named_customer'|'distributor'>('walk_in'),[partyId,setPartyId]=useState('');
+ const [lines,setLines]=useState<Line[]>([{productId:1,quantity:'',unitPrice:''}]);
+ const [paid,setPaid]=useState(''),[method,setMethod]=useState<'cash'|'card'|'transfer'>('cash'),[notes,setNotes]=useState('');
+ const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ const [printInvoice,setPrintInvoice]=useState<any|null>(null),[printBusy,setPrintBusy]=useState(false);
+ const total=useMemo(()=>lines.reduce((s,l)=>s+(Number(l.quantity)||0)*(Number(l.unitPrice)||0),0),[lines]);
+ const loadHistory=async(date=historyDate)=>{const range=date?{fromDate:date,toDate:date}:{};const [iv,sm]=await Promise.all([window.ronaq.salesInvoices(range),window.ronaq.salesSummary(range)]);setInvoices(iv);setSummary(sm||{});};
+ const refresh=async()=>{const [p,ps,iv]=await Promise.all([window.ronaq.products(),window.ronaq.salesParties(),window.ronaq.salesInvoices({fromDate:today(),toDate:today()})]);setProducts(p);setParties(ps);setTodayInvoices(iv);await loadHistory();};
+ useEffect(()=>{refresh().catch(e=>setMessage(e.message||'تعذر تحميل المبيعات'));},[]);
+ useEffect(()=>{loadHistory(historyDate).catch(e=>setMessage(e instanceof Error?e.message:'تعذر تحميل سجل المبيعات'));},[historyDate]);
+ const openInvoice=async(id:number)=>{try{setPrintBusy(true);setPrintInvoice(await window.ronaq.salesInvoiceDetails(id));}catch(e){setMessage(e instanceof Error?e.message:'تعذر تحميل الفاتورة');}finally{setPrintBusy(false)}};
+ const save=async()=>{try{setBusy(true);setMessage('');const valid=lines.filter(x=>x.quantity.trim()&&x.unitPrice.trim()).map(x=>({productId:x.productId,quantity:Number(x.quantity),unitPrice:Number(x.unitPrice)}));const paidAmount=paid.trim()===''?total:Number(paid);const result=await window.ronaq.createSalesInvoice({saleKind:kind,partyId:kind==='walk_in'?null:Number(partyId)||null,lines:valid,paidAmount,paymentMethod:method,notes});await refresh();setLines([{productId:products[0]?.id||1,quantity:'',unitPrice:''}]);setPaid('');setNotes('');setPartyId('');setMessage(`تم حفظ الفاتورة ${result.invoiceNo} · المتبقي ${fmt(result.remainingAmount)} د.ع`);}catch(e){setMessage(e instanceof Error?e.message:'تعذر حفظ الفاتورة');}finally{setBusy(false)}};
+ return <section className="panel" style={{padding:24}}>
+  <div className="panel-head"><div><h2>تسجيل فاتورة بيع</h2><p>السعر يُحدد لكل فاتورة، والمخزون والصندوق والذمم تتحدث تلقائياً.</p></div><button onClick={()=>refresh()}><RefreshCw size={15}/> تحديث</button></div>
+  <div className="sales-kpis"><div><span>مبيعات اليوم</span><b>{fmt(summary.sales_total)} د.ع</b></div><div><span>المقبوض اليوم</span><b>{fmt(summary.received_total)} د.ع</b></div><div><span>الآجل اليوم</span><b>{fmt(summary.debt_total)} د.ع</b></div><div><span>عدد الفواتير</span><b>{fmt(summary.invoice_count)} </b></div></div>
+  <div className="sales-form-grid"><label>نوع البيع<select value={kind} onChange={e=>{setKind(e.target.value as any);setPartyId('')}}><option value="walk_in">زبون نقدي / مباشر</option><option value="named_customer">زبون معروف</option><option value="distributor">موزع</option></select></label>
+  {kind!=='walk_in'&&<label>اسم الجهة<select value={partyId} onChange={e=>setPartyId(e.target.value)}><option value="">اختر الاسم</option>{parties.filter(p=>kind==='distributor'?p.party_type==='distributor':p.party_type==='customer').map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+  <label>المبلغ المقبوض<input type="number" min="0" value={paid} placeholder={`الافتراضي كامل المبلغ: ${fmt(total)}`} onChange={e=>setPaid(e.target.value)}/></label>
+  <label>طريقة القبض<select value={method} onChange={e=>setMethod(e.target.value as any)}><option value="cash">نقداً</option><option value="card">بطاقة</option><option value="transfer">تحويل</option></select></label></div>
+  <h3 style={{marginTop:22}}>مواد الفاتورة</h3>
+  {lines.map((line,i)=><div className="sales-line" key={i}><select value={line.productId} onChange={e=>setLines(a=>a.map((v,j)=>j===i?{...v,productId:Number(e.target.value)}:v))}>{products.map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</select><input type="number" min="1" value={line.quantity} placeholder="الكمية" onChange={e=>setLines(a=>a.map((v,j)=>j===i?{...v,quantity:e.target.value}:v))}/><input type="number" min="0" value={line.unitPrice} placeholder="سعر الوحدة بالدينار" onChange={e=>setLines(a=>a.map((v,j)=>j===i?{...v,unitPrice:e.target.value}:v))}/><b>{fmt((Number(line.quantity)||0)*(Number(line.unitPrice)||0))}</b><button className="icon-btn" disabled={lines.length===1} onClick={()=>setLines(a=>a.filter((_,j)=>j!==i))}>×</button></div>)}
+  <div className="sales-bottom"><button onClick={()=>setLines(a=>[...a,{productId:products[0]?.id||1,quantity:'',unitPrice:''}])}><Plus size={15}/> إضافة مادة</button><label>ملاحظات<input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="اختياري"/></label><div className="sales-total"><span>إجمالي الفاتورة</span><strong>{fmt(total)} د.ع</strong></div><button className="primary-btn" disabled={busy||total<=0|| (kind!=='walk_in'&&!partyId)||((paid.trim()!==''&&Number(paid)<total)&&!partyId)} onClick={save}>{busy?'جارٍ الحفظ...':'حفظ الفاتورة'}</button></div>
+  {message&&<p role="status" className="sales-message">{message}</p>}
+  <div className="sales-history-layout" style={{marginTop:28}}>
+   <aside className="sales-today-side">
+    <div className="warehouse-toolbar"><div><h2>قوائم اليوم</h2><p>تبقى ظاهرة أثناء استعراض السجل</p></div><ReceiptText size={20}/></div>
+    <div className="table-scroll"><table className="stock-table"><thead><tr><th>رقم</th><th>الجهة</th><th>الإجمالي</th><th>عرض</th></tr></thead><tbody>{todayInvoices.map(x=><tr key={x.id}><td>{x.invoice_no}</td><td>{x.party_name}</td><td>{fmt(x.total_amount)}</td><td><button type="button" onClick={()=>openInvoice(x.id)} disabled={printBusy}>فتح</button></td></tr>)}{todayInvoices.length===0&&<tr><td colSpan={4}>لا توجد قوائم بيع اليوم.</td></tr>}</tbody></table></div>
+   </aside>
+   <section className="sales-history-main">
+    <div className="warehouse-toolbar"><div><h2>سجل المبيعات</h2><p>{historyDate?`قوائم البيع بتاريخ ${historyDate}`:'جميع قوائم البيع المسجلة'}</p></div><ReceiptText size={20}/></div>
+    <div className="sales-history-filter"><label>تصفية حسب التاريخ<input type="date" value={historyDate} onChange={e=>setHistoryDate(e.target.value)}/></label><button type="button" onClick={()=>setHistoryDate('')} disabled={!historyDate}>عرض كل التواريخ</button></div>
+    <div className="table-scroll"><table className="stock-table"><thead><tr><th>رقم القائمة</th><th>التاريخ</th><th>الجهة</th><th>الإجمالي</th><th>المقبوض</th><th>المتبقي</th><th>الإجراء</th></tr></thead><tbody>{invoices.map(x=><tr key={x.id}><td>{x.invoice_no}</td><td>{x.invoice_date||x.created_at}</td><td>{x.party_name}</td><td>{fmt(x.total_amount)}</td><td>{fmt(x.paid_amount)}</td><td>{fmt(x.remaining_amount)}</td><td><button type="button" onClick={()=>openInvoice(x.id)} disabled={printBusy}>عرض / طباعة</button></td></tr>)}{invoices.length===0&&<tr><td colSpan={7}>{historyDate?'لا توجد قوائم بيع بهذا التاريخ.':'لا توجد قوائم بيع مسجلة.'}</td></tr>}</tbody></table></div>
+   </section>
+  </div>
+  {printInvoice&&<div className="invoice-preview-backdrop"><div className="invoice-preview-actions"><button onClick={()=>window.print()}>طباعة / حفظ PDF</button><button onClick={()=>setPrintInvoice(null)}>إغلاق</button></div><article className="invoice-print" dir="rtl"><header><img src="/ronaQ-logo.jpg"/><div><h1>رونق البصرة</h1><p>فاتورة بيع</p></div><div className="invoice-number"><b>{printInvoice.invoice_no}</b><span>{printInvoice.created_at||printInvoice.invoice_date}</span></div></header><div className="invoice-party"><span>الزبون: <b>{printInvoice.party_name}</b></span>{printInvoice.party_phone&&<span>الهاتف: {printInvoice.party_phone}</span>}</div><table><thead><tr><th>#</th><th>المادة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead><tbody>{printInvoice.lines.map((l:any,i:number)=><tr key={l.id}><td>{i+1}</td><td>{l.product_name}</td><td>{fmt(l.quantity)} {l.unit||''}</td><td>{fmt(l.unit_price)}</td><td>{fmt(l.line_total)}</td></tr>)}</tbody></table><div className="invoice-totals"><p>الإجمالي: <b>{fmt(printInvoice.total_amount)} د.ع</b></p><p>المقبوض: <b>{fmt(printInvoice.paid_amount)} د.ع</b></p><p>المتبقي: <b>{fmt(printInvoice.remaining_amount)} د.ع</b></p></div>{printInvoice.notes&&<p>ملاحظات: {printInvoice.notes}</p>}<footer>شكراً لتعاملكم مع رونق البصرة</footer></article></div>}
+ </section>
+}
